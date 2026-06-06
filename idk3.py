@@ -15,9 +15,9 @@ import os
 import argparse
 from tqdm import tqdm
 
-DEFAULT_INPUT_DIR   = r"C:\Users\bayar\Downloads\dadlaga2\img_celeba\img_celeba"
-DEFAULT_OUTPUT_DIR  = r"C:\Users\bayar\Downloads\dadlaga2\celeba_aligned"
-DEFAULT_PREDICTOR   = r"C:\Users\bayar\Downloads\dadlaga2\shape_predictor_68_face_landmarks.dat"
+DEFAULT_INPUT_DIR   = r"test_image.jpg"
+DEFAULT_OUTPUT_DIR  = r"test_image.jpg"
+DEFAULT_PREDICTOR   = r"test_image.jpg"
 DEFAULT_OUTPUT_SIZE = 256
 DEFAULT_EYE_RATIO   = 0.35
 DEFAULT_EXT         = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
