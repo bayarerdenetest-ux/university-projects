@@ -6,8 +6,8 @@ import os
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-input_folder = r"C:\Users\bayar\OneDrive\Documents\dadlaga2"
-output_folder = r"C:\Users\bayar\OneDrive\Documents\dadlaga2\celeba_aligned"
+input_folder = r"test_image_folder.jpg"
+output_folder = r"test_image_folder.jpg"
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
