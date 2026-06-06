@@ -15,11 +15,11 @@ from tqdm import tqdm
 
 # INPUT_DIR is a string path to the CelebA image folder.
 # Use CELEBA_INPUT_DIR so a personal local path is not saved in GitHub. But it might be already saved when you read this
-DEFAULT_INPUT_DIR   = r"C:\Users\bayar\Downloads\dadlaga2\img_celeba\img_celeba"
+DEFAULT_INPUT_DIR   = r"test_image.jpg"
 # OUTPUT_DIR is a string path to the aligned output images folder.
-DEFAULT_OUTPUT_DIR  = r"C:\Users\bayar\Downloads\dadlaga2\celeba_aligned"
+DEFAULT_OUTPUT_DIR  = r"test_image.jpg"
 # PREDICTOR_PATH is a string path to the LBF facial landmark model file.
-DEFAULT_PREDICTOR = r"C:\Users\bayar\Downloads\dadlaga2\lbfmodel.yaml"
+DEFAULT_PREDICTOR = r"test_image.jpg"
 # OUTPUT_SIZE is an integer pixel dimension for the output square image.
 DEFAULT_OUTPUT_SIZE = 256
 # EYE_RATIO is a float controlling vertical eye position in the output image.
