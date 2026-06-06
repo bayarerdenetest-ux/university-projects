@@ -5,7 +5,7 @@ import numpy as np
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-image_path = r"C:\Users\bayar\OneDrive\Documents\dadlaga2\117609625_3316220301754065_6677725108456662672_n.jpg"
+image_path = r"test_image.jpg"
 img = cv2.imread(image_path)
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
