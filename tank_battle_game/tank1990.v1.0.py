@@ -1,3 +1,12 @@
+# tank1990.v1.0
+# File: tank1990.v1.py
+# Date: 2026-06-10
+# Python: Python 3.14.0
+# Requirement with Python: pygame-ce
+# Tested with: Python 3.14.0 & pygame-ce
+# Environment: Local Python interpreter, no virtual environment
+# Purpose: Create bot, play with bot, and two-player game
+
 import pygame
 import sys
 import math
