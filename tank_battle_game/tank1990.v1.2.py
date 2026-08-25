@@ -321,6 +321,7 @@ class BotAI:
             tx2,ty2=int(cx2//TILE),int(cy2//TILE)
             if not (0<=tx2<COLS and 0<=ty2<ROWS): break
             if grid[ty2][tx2] in (T_STEEL,T_BRICK): break
+            if grid[ty2][tx2] == T_FORT: return False 
             for tgt in targets:
                 if tgt.alive and tgt.rect().collidepoint(cx2,cy2): return True
         return False
@@ -631,6 +632,9 @@ class Game:
         for b in self.bullets:
             hit=b.update(self.grid)
             if hit in ('brick','steel'): self._play('hit')
+            elif hit == 'fort':
+                self.fort_dead = True
+                self._play('explode')
 
         for b in list(self.bullets):
             if not b.alive: continue

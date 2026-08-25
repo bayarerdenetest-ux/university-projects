@@ -1,11 +1,11 @@
-# File: tank1990.v1.1.py
-# Date: 2026-06-15
+# File: tank1990.v1.3.0.py
+# Date: 2026-08-05
 # Python: 3.14
 # Requirement: pygame-ce
 # Tested with: Python 3.14.0 with pygame-ce
 # Environment: Local Python interpreter, no virtual environment
 # Purpose: Create bot, play with bot, and two-player game
-# Game_version: 1.2.1
+# Game_version: 1.3.0
 # Developers: Bayar-Erdene, Altanbayar, AmgalanBaatar, Gansukh
 
 #-----New features--------------------------------------------------------------
@@ -13,8 +13,16 @@
 # Now players can adjust the size of the tab
 # Added bot cooldown
 # Added developers names on the bottom right corner
+# v.1.2.1
 # In the last version, bot does not shoot randomly to the fortress and although the fortress is destroyed, game does not end
 # In this version, we fixed those logical and mechanical mistakes
+# v.1.2.2
+# Now player can see their scores on Game over screen
+# And player will show the best score on the GAME END diplay
+# Moreover, player born with sheld 
+# v.1.3.0
+# In this version we fixed movement of bot 
+# Moreover, it used to have a only one map but now map will be randomly generated every time player starts a new game
 
 import pygame
 import sys
@@ -116,43 +124,37 @@ def make_hit_sound():
     return _make_wav(samples, rate)
 
 # ─── Map ──────────────────────────────────────────────────────────────────────
-BASE_MAP = [
-    "                          ",
-    " ##  ##  ##  ## ##  ##  ##",
-    " ##  ##  ##     ##  ##  ##",
-    " ##  ##  ##  ## ##  ##  ##",
-    "                          ",
-    " ## S##  ##  ## ##  ##S ##",
-    " ##  ##  ##  ## ##  ##  ##",
-    " ##  ##  ##  ## ##  ##  ##",
-    "                          ",
-    " ##  ##  ##  ## ##  ##  ##",
-    " ##  ##  ##  ## ##  ##  ##",
-    " ##  ##SS ##  ## ##S ##  ##",
-    "            ##            ",
-    " ##  ##  ## ## ##  ##  ## ",
-    " ##  ##  ##    ##  ##  ## ",
-    " ##  ##  ## ## ##  ##  ## ",
-    "                          ",
-    " ##  ##  ##  ## ##  ##  ##",
-    " ##  ##  ##  ## ##  ##  ##",
-    " ##  ##SS ##  ## ##S ##  ##",
-    "                          ",
-    " ##  ##  ##  ## ##  ##  ##",
-    "          #FFF#           ",
-    "          #FFF#           ",
-]
 def build_map():
-    grid=[]
-    for row_str in BASE_MAP:
-        row=[]
-        for ch in row_str.ljust(COLS)[:COLS]:
-            if ch=='#': row.append(T_BRICK)
-            elif ch=='S': row.append(T_STEEL)
-            elif ch=='F': row.append(T_FORT)
-            else: row.append(T_EMPTY)
-        grid.append(row)
-    while len(grid)<ROWS: grid.append([T_EMPTY]*COLS)
+    # Randomly generated layout — different every match. The fortress and the
+    # player/enemy spawn lanes are always kept clear so spawning & win/lose
+    # logic stay valid; everything else is randomized (mirrored left-right
+    # for a fair, balanced field).
+    grid=[[T_EMPTY]*COLS for _ in range(ROWS)]
+
+    fort_row=22
+    for tx in (10,14):
+        grid[fort_row][tx]=T_BRICK; grid[fort_row+1][tx]=T_BRICK
+    for tx in (11,12,13):
+        grid[fort_row][tx]=T_FORT; grid[fort_row+1][tx]=T_FORT
+
+    top_safe={c for col in (1,6,12,18,23) for c in (col-1,col,col+1)}
+    bottom_safe={c for col in (9,15) for c in (col-1,col,col+1)}
+    lane_rows={0,4,8,12,16,20}
+
+    half=(COLS+1)//2
+    for ty in range(1,fort_row):
+        if ty in lane_rows: continue
+        row_safe = top_safe if ty<=2 else (bottom_safe if ty>=19 else set())
+        for tx in range(half):
+            if tx in row_safe: continue
+            r=random.random()
+            if r<0.55: tile=T_BRICK
+            elif r<0.68: tile=T_STEEL
+            else: tile=T_EMPTY
+            mx=COLS-1-tx
+            grid[ty][tx]=tile
+            if mx not in row_safe:
+                grid[ty][mx]=tile
     return grid
 
 # ─── Draw helpers ─────────────────────────────────────────────────────────────
@@ -257,6 +259,7 @@ class Tank:
         self.shoot_cooldown=0
         self.w=self.h=TILE-2
         self.lives=3 if player_id in ('p1','p2') else 1
+        self.invincible_timer = 0
         self.speed=self.BASE_SPEED*speed_mul
         # ── Per-frame movement priority tracking ──────────────────────────────
         # Keeps the last requested direction so we don't freeze when two keys held
@@ -265,6 +268,7 @@ class Tank:
     def respawn(self):
         self.x,self.y=self.start_x,self.start_y
         self.alive=True; self.shoot_cooldown=90; self._move_dir=None
+        self.invincible_timer = 90
 
     def can_shoot(self): return self.shoot_cooldown<=0
 
@@ -298,6 +302,8 @@ class Tank:
 
     def draw(self,surf):
         if not self.alive: return
+        if self.invincible_timer > 0 and self.invincible_timer % 6 < 3:
+            return
         draw_tank(surf,int(self.x),int(self.y),self.dir,self.color,
                   self.player_id in ('p1','p2'))
 
@@ -323,7 +329,6 @@ class BotAI:
             tx2,ty2=int(cx2//TILE),int(cy2//TILE)
             if not (0<=tx2<COLS and 0<=ty2<ROWS): break
             if grid[ty2][tx2] in (T_STEEL,T_BRICK): break
-            if grid[ty2][tx2] == T_FORT: return False 
             for tgt in targets:
                 if tgt.alive and tgt.rect().collidepoint(cx2,cy2): return True
         return False
@@ -355,11 +360,12 @@ class BotAI:
         living=[p for p in player_tanks if p.alive]
         if living and t.can_shoot():
             nearest=min(living,key=lambda p:self._dist(p.x,p.y,t.x,t.y))
-            aligned_h=abs(t.y-nearest.y)<TILE
-            aligned_v=abs(t.x-nearest.x)<TILE
-            if aligned_h: t.dir=1 if nearest.x>t.x else 3
-            elif aligned_v: t.dir=2 if nearest.y>t.y else 0
-            if (aligned_h or aligned_v) and self._line_of_sight(grid,living):
+            # Aim using the tank's current facing (set by move() above) so the
+            # turret/nose never turns away from the direction it's driving in.
+            dxf,dyf=DIR_VEC[t.dir]
+            aligned=((dxf!=0 and abs(t.y-nearest.y)<TILE and (nearest.x-t.x)*dxf>0) or
+                     (dyf!=0 and abs(t.x-nearest.x)<TILE and (nearest.y-t.y)*dyf>0))
+            if aligned and self._line_of_sight(grid,living):
                 return t.shoot(d['shoot_cd'])
             elif random.random()<d['bot_shoot_chance']:
                 return t.shoot(d['shoot_cd'])
@@ -520,7 +526,7 @@ def draw_menu(surf,font,big_font,small_font,selected,blink):
     # Credits — dim, bottom-right
     draw_credits(surf, small_font)
 
-def draw_gameover(surf,font,big_font,small_font,won,score,blink):
+def draw_gameover(surf,font,big_font,small_font,won,score,high_score,blink):
     surf.fill(C_MENU_BG)
     msg="YOU WIN!" if won else "GAME OVER"
     col=C_YELLOW if won else C_RED
@@ -528,9 +534,16 @@ def draw_gameover(surf,font,big_font,small_font,won,score,blink):
     surf.blit(t,(BASE_W//2-t.get_width()//2,160))
     sc=font.render(f"Score: {score}",True,C_WHITE)
     surf.blit(sc,(BASE_W//2-sc.get_width()//2,268))
+    # High score
+    hs_col=C_YELLOW if score>=high_score else C_GRAY
+    hs=font.render(f"Best:  {high_score}",True,hs_col)
+    surf.blit(hs,(BASE_W//2-hs.get_width()//2,308))
+    if score>=high_score and score>0:
+        new_lbl=small_font.render(" NEW RECORD! ",True,C_YELLOW)
+        surf.blit(new_lbl,(BASE_W//2-new_lbl.get_width()//2,340))
     if blink:
         c=small_font.render("Enter = play again     Esc = menu",True,C_GRAY)
-        surf.blit(c,(BASE_W//2-c.get_width()//2,370))
+        surf.blit(c,(BASE_W//2-c.get_width()//2,390))
     draw_credits(surf, small_font)
 
 # ─── Game ─────────────────────────────────────────────────────────────────────
@@ -605,6 +618,7 @@ class Game:
             else:
                 p1._move_dir = None
             if p1.shoot_cooldown>0: p1.shoot_cooldown-=1
+            if p1.invincible_timer > 0: p1.invincible_timer -= 1
 
         # ── Player 2 movement ─────────────────────────────────────────────────
         p2=self.players.get('p2')
@@ -623,6 +637,7 @@ class Game:
             else:
                 p2._move_dir = None
             if p2.shoot_cooldown>0: p2.shoot_cooldown-=1
+            if p2.invincible_timer > 0: p2.invincible_timer -= 1
 
         # ── Bots ──────────────────────────────────────────────────────────────
         living_players=[p for p in self.players.values() if p.alive]
@@ -634,7 +649,7 @@ class Game:
         for b in self.bullets:
             hit=b.update(self.grid)
             if hit in ('brick','steel'): self._play('hit')
-            elif hit == 'fort':
+            elif hit == 'fort':          
                 self.fort_dead = True
                 self._play('explode')
 
@@ -649,7 +664,7 @@ class Game:
                         self._play('explode'); break
             elif b.owner=='enemy':
                 for pid,p in self.players.items():
-                    if p.alive and br.colliderect(p.rect()):
+                    if p.alive and p.invincible_timer <= 0 and br.colliderect(p.rect()):
                         b.alive=False; p.lives-=1
                         self.particles+=spawn_explosion(p.x+TILE//2,p.y+TILE//2,True)
                         self._play('explode')
@@ -732,6 +747,7 @@ def main():
 
     state=GameMode.MENU; selected=0; settings=None; game=None
     blink=True; blink_t=0
+    high_score=0
 
     while True:
         dt=clock.tick(FPS)
@@ -795,7 +811,9 @@ def main():
         if state==GameMode.PLAY and game:
             keys=pygame.key.get_pressed()
             game.update(keys)
-            if game.over: state=GameMode.GAMEOVER
+            if game.over:
+                if game.score>high_score: high_score=game.score
+                state=GameMode.GAMEOVER
 
         # Draw to logical surface
         if state==GameMode.MENU:
@@ -810,7 +828,7 @@ def main():
             draw_hud(logic_surf,font,small_font,game)
             overlay=pygame.Surface((BASE_W,BASE_H),pygame.SRCALPHA)
             overlay.fill((0,0,0,160)); logic_surf.blit(overlay,(0,0))
-            draw_gameover(logic_surf,font,big_font,small_font,game.won,game.score,blink)
+            draw_gameover(logic_surf,font,big_font,small_font,game.won,game.score,high_score,blink)
 
         # Scale logical surface → actual window
         sw,sh=screen.get_size()
