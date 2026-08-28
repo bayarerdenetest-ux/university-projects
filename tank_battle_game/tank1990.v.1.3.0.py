@@ -9,7 +9,9 @@
 # Developers: Bayar-Erdene, Altanbayar, AmgalanBaatar, Gansukh
 
 #-----New features--------------------------------------------------------------
+# v.1.1.0
 # In this version we fixed bug in controller
+# v.1.2.0
 # Now players can adjust the size of the tab
 # Added bot cooldown
 # Added developers names on the bottom right corner
